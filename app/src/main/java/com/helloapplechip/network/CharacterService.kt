@@ -1,23 +1,57 @@
 package com.helloapplechip.network
 
+import android.util.Log
 import com.helloapplechip.model.CharacterResponse
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
+import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.engine.android.Android
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
+import io.ktor.client.request.get
+import io.ktor.http.isSuccess
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
 
-interface CharacterService {
+class CharacterService {
 
-    @GET("character")
-    suspend fun getCharacters(): CharacterResponse
+    private val client = HttpClient(Android) {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                isLenient = true
+                prettyPrint = true
+            })
+        }
+        
+        install(Logging) {
+            logger = object : Logger {
+                override fun log(message: String) {
+                    Log.d("KtorClient", message)
+                }
+            }
+            level = LogLevel.INFO
+        }
+    }
 
-    object NetworkModule {
+    suspend fun getCharacters(): CharacterResponse {
+        try {
+            val response = client.get("${ROOT_URL}character")
+            
+            if (response.status.isSuccess()) {
+                return response.body<CharacterResponse>()
+            } else {
+                throw Exception("HTTP ${response.status.value}: ${response.status.description}")
+            }
+        } catch (e: Exception) {
+            Log.e("CharacterService", "Error fetching characters", e)
+            throw e
+        }
+    }
 
-        private var retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(ROOT_URL)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        val characterService: CharacterService = retrofit.create(CharacterService::class.java)
+    fun close() {
+        client.close()
     }
 
     companion object {
