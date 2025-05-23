@@ -1,12 +1,15 @@
 package com.helloapplechip.model
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class CharacterResponse(
-    @SerializedName("results")
+    @SerialName("results")
     val results: List<Character>
 )
 
+@Serializable
 data class Character(
     val id: Int,
     val name: String,
